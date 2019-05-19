@@ -9,88 +9,105 @@ import java.util.*;
 5) continue with next period
 */
 
-// java.util.Date time=new java.util.Date((long)timeStamp*1000)
 public class OHLCData {
 
   public static void main(String[] args) {
-        List<java.util.Date> dates = new ArrayList<java.util.Date>();
-        List<Double> prices = new ArrayList<Double>();
-        List<String> orders = new ArrayList<String>();
-
+        List<Integer> times = new ArrayList<Integer>();
+        List<Integer> prices = new ArrayList<Integer>();
+        List<Order> orders = new ArrayList<String>();
         Scanner scan = new Scanner(System.in);
-        int startDate = 1506999900;
+        int startTime = 1506999900;
         String line = scan.nextLine();
         while (!line.equals("")) {
 
-            String line = scan.nextLine();
             String[] arr = line.split("\\s+");
-            int unixSeconds = Integer.parseInt(arr[0]);
-            Date date = new Date((long) unixSeconds*1000L);
-            //Date time = new Date((long)Integer.parseInt(arr[0])*1000);
-            String operation = arr[1];
-            switch (operation) {
-                case "ADD":
-                    double price = Double.parseDouble(arr[5]);
-                    Record r = new Record(date, operation, id, side, size, price);
-                    orders.add(r);
+            int time = Integer.parseInt(arr[0]);
 
-                    dates.add(time);
-                    prices.add(price);
-                    break;
+            while ((time - startTime) < 300) { 
+                String operation = arr[1];
+                switch (operation) {
+                    case "ADD":
+                        String id = arr[2];
+                        String side = arr[3];
+                        int size = Integer.parseInt(arr[4]);
+                        int price = Integer.parseInt(arr[5]);
+                        Order o = new Order(date, operation, id, side, size, price);
+                        orders.add(o);
+                        break;
 
-                case "MODIFY":
-                    double price = Double.parseDouble(arr[5]);
-                    String id = arr[2];
-                    int size = arr[3];
-                    int price = arr[4];
-                    double
-                    dates.add(time);
-                    prices.add(price);
-                    break;
+                    case "MODIFY":
+                        String id = arr[2];
+                        int size = Integer.parseInt(arr[3]);
+                        int price = Integer.parseInt(arr[4]);
+                        for (Order o : orders) {
+                            if(o.getID().equals(id)) {
+                                o.setSize(size);
+                                o.setPrice(price);
+                            }
+                        }
+                        break;
 
-                case "CANCEL":
-                    double price = Double.parseDouble(arr[5]);
-                    dates.add(time);
-                    prices.add(price);
-                    break;
+                    case "CANCEL":
+                        String id = arr[2];
+                        removeByID(orders, id);
+                        break;
 
-                case "RESET":
-                    double price = Double.parseDouble(arr[5]);
-                    dates.add(time);
-                    prices.add(price);
-                    break;
+                    case "RESET":
+                        orders.clear();
+                        break;
+                }
             }
+            produceOutput();
+            executeOrders();
             line = scan.nextLine();
         }
         scan.close();
-        for (Date d : dates) {
-          System.out.println(d.toString());
-        }
-        Date[] datesArr = convertDates(dates);
-        double[] pricesArr = convertDoubles(prices);
-        OHLCData data = new OHLCData(datesArr, pricesArr, datesArr[0], 300);
-        System.out.println(data.getDates());
-        System.out.println(data.getLows());
-        System.out.println(data.getHighs());
-        System.out.println(data.getOpens());
-        System.out.println(data.getCloses());
   }
 
-  public class Record {
-    private int date;
+  public removeByID(List<Order> orders, String id) {
+      for (Order o : orders) {
+          if (o.getID().equals(id)) {
+              orders.remove(o);
+          }
+      }
+  }
+
+  public class Order {
+    private int time;
     private String operation;
-    private int id;
+    private String id;
     private String side;
     private int size;
     private int price;
 
-    public Record(int date, String operation, int id, String side, int size, int price) {
+    public Order(int time, String operation, String id, String side, int size, int price) {
       this.date = date;
 
+    }
+
+    public int getTime() {
+      return time;
+    }
+
+    public String getOperation() {
+      return operation;
+    }
+
+    public String getID() {
+      return id;
+    }
+
+    public String getSide() {
+      return side;
+    }
+
+    public int getSize() {
+      return price;
     }
 
     public int getPrice() {
       return price;
     }
+
   }
 }
