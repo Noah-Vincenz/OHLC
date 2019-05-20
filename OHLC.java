@@ -64,15 +64,25 @@ public class OHLC {
                 line = scan.nextLine();
             }
 
-            ordersSortedByPrice = copyArray(orders);
+            ordersSortedByPrice = copyList(orders);
             Collections.sort(ordersSortedByPrice);
             System.out.println("Orders(" + orders.size() +"): ");
             printList(orders);
             System.out.println("");
             System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
             printList(ordersSortedByPrice);
+            System.out.println("OUTPUT:");
             produceOutput(startTime, orders, ordersSortedByPrice);
-            orders = executeOrders(orders, ordersSortedByPrice);
+            ordersSortedByPrice = executeOrders(ordersSortedByPrice);
+            // Need to do this, as orders has been updated, but ordersSortedByPrice needs to update correspondingly
+            orders = copyList(ordersSortedByPrice);
+            Collections.sort(orders, new TimeComparator());
+            System.out.println("After execution:");
+            System.out.println("Orders(" + orders.size() +"): ");
+            printList(orders);
+            System.out.println("");
+            System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
+            printList(ordersSortedByPrice);
             startTime = currentTime;
             line = scan.nextLine();
         }
@@ -89,11 +99,11 @@ public class OHLC {
   
   public static void printList (List<Order> orders) {
 	  for (int i=0; i < orders.size(); ++i) {
-		  System.out.println("Order: " + orders.get(i).getID() + ", Time: " + orders.get(i).getTime() + ", Price: " + orders.get(i).getPrice());
+		  System.out.println("Time: " + orders.get(i).getTime() + ", OrderID: " + orders.get(i).getID() + ", Side: " + orders.get(i).getSide() + ", Size: " + orders.get(i).getSize()+ ", Price: " + orders.get(i).getPrice());
 	  }
   }
 
-  public static List<Order> copyArray (List<Order> originalList) {
+  public static List<Order> copyList (List<Order> originalList) {
       List<Order> copy = new ArrayList<Order>();
       for (Order o : originalList) {
           try {
@@ -202,38 +212,68 @@ public class OHLC {
       System.out.println(startTime + "\t" + OPEN + "\t" + HIGH + "\t" + LOW + "\t" + CLOSE + "\n");
   }
 
-  public static List<Order> executeOrders(List<Order> orders, List<Order> ordersSortedByPrice) {
+  public static List<Order> executeOrders(List<Order> ordersSortedByPrice) {
       // go through all sell orders
       // look at sell amount and find buy amounts starting with highest before sell - decrease size
       // Sort orders by high
       // TODO: this does not work as we need to continue working with 'orders' in next round, however, we are only modyfying ordersSortedByPrice
       // maybe make orders a hashmap<time,Order>? can access elems O(1)
       for (int i = 0; i < ordersSortedByPrice.size(); ++i) { // looping from highest price order to lowest
-          Order o = ordersSortedByPrice.get(i);
-          if (o.getSide.equals("S")) {
-              int size = o.getSize;
-              tradeBuyOrders(i, size, ordersSortedByPrice);
-          }
-      }
-  }
-
-  public static void tradeBuyOrders(int index, int sizeToRemove, List<Order> ordersSortedByPrice) {
-      for (int i = index; i < ordersSortedByPrice.size(); ++i) {
-          Order o = ordersSortedByPrice.get(i);
-          if (o.getSide.equals("B")) {
-              int size = o.getSize();
-              if (size > sizeToRemove) {
-                  o.setSize(size - sizeToRemove);
-                  break;
-                  // TODO: set original sell object size to 0
-              } else {
-                  o.setSize(0);
-                  sizeToRemove -= size;
-                  // continue
+          Order o1 = ordersSortedByPrice.get(i);
+          if (o1.getSide().equals("S")) {
+              int o1Time = o1.getTime();
+              String o1ID = o1.getID();
+              System.out.println("REDUCING SELL ORDER " + o1ID);
+              for (int j = 0; j < ordersSortedByPrice.size(); ++j) {
+            	  	Order o2 = ordersSortedByPrice.get(j);
+        	  		if (o2.getSide().equals("B") && (o2.getTime() <= o1Time)) { // reduce the size of this buy order
+        	  			int o2Size = o2.getSize();
+        	  			String o2ID = o2.getID();
+        	            System.out.println("REDUCING BUY ORDER " + o2ID);
+        	  			if (o2Size > o1.getSize()) {
+            	            System.out.println("O2 is larger than O1!");
+        	  				reduceSizeByID(o2ID, o2Size - o1.getSize(), ordersSortedByPrice);
+        	  				reduceSizeByID(o1ID, 0, ordersSortedByPrice);
+        	  				/*
+        	  				o2.setSize(o2Size - o1Size);
+        	  				o1.setSize(0);
+        	  				*/
+        	  			} else if (o2Size <= o1.getSize()) {
+            	            System.out.println("O2 is smaller than O1!");
+        	  				reduceSizeByID(o2ID, 0, ordersSortedByPrice);
+        	  				reduceSizeByID(o1ID, o1.getSize() - o2Size, ordersSortedByPrice);
+        	  				System.out.println("New o1 size: " + o1.getSize());
+        	  				System.out.println("New o2 size: " + o2.getSize());
+        	  				/*
+        	  				o2.setSize(0);
+        	  				o1.setSize(o1Size - o2Size);
+        	  				*/
+        	  			}
+        	  		}
+        	  		if (o1.getSize() == 0) {
+    	  				break;
+    	  			}
               }
           }
       }
+      return ordersSortedByPrice;
   }
+
+  public static void reduceSizeByID(String id, int newSize, List<Order> orders) {
+	  for (int i=0; i<orders.size(); ++i) {
+		  Order o = orders.get(i);
+		  if (o.getID().equals(id)) {
+			  o.setSize(newSize);
+		  }
+	  }
+  }
+  
+  public static class TimeComparator implements Comparator<Order> {
+	  	@Override
+	    public int compare(Order a, Order b) {
+	        return a.getTime() < b.getTime() ? -1 : a.getTime() == b.getTime() ? 0 : 1;
+	    }
+	}
 
   public static class Order implements Comparable<Order>, Cloneable {
     private int time;
