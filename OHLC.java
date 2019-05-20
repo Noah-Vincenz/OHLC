@@ -1,4 +1,8 @@
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Scanner;
 
 /**
  * This class represents an Open-High-Low-Close generator from input data.
@@ -15,33 +19,32 @@ public class OHLC {
         List<Order> ordersSortedByPrice = new ArrayList<Order>();
         Scanner scan = new Scanner(System.in);
         String line = scan.nextLine();
-        while (!line.equals("")) { // loop while input is given 
-        		String[] arr = line.split("\\s+"); // split input by columns
-            int currentTime = Integer.parseInt(arr[0]);
+        while (!line.equals("")) { // loop while input is given
+        		// split input by columns:
+	    		// [0] = time
+	    		// [1] = operation
+	    		// [2] = id
+	    		// [3] = side
+	    		// [4] = size
+	    		// [5] = price
+        		String[] columnArr = line.split("\\s+");
+            int currentTime = Integer.parseInt(columnArr[0]);
 	        while (!line.equals("")) { // loop while being within period
 	        		// split input by columns
-	        		arr = line.split("\\s+"); 
-	            currentTime = Integer.parseInt(arr[0]);
+	        		columnArr = line.split("\\s+"); 
+	            currentTime = Integer.parseInt(columnArr[0]);
 	            if ((currentTime - startTime) >= 300) {
 	            		break;
 	            }
-	            String operation = arr[1];
+	            String operation = columnArr[1];
 	            if (operation.equals("ADD")) {
-	                String id = arr[2];
-	                String side = arr[3];
-	                int size = Integer.parseInt(arr[4]);
-	                int price = Integer.parseInt(arr[5]);
-	                orders.add(new Order(currentTime, id, side, size, price));
+	                orders.add(new Order(currentTime, columnArr[2], columnArr[3], Integer.parseInt(columnArr[4]), Integer.parseInt(columnArr[5])));
 	            }
 	            else if (operation.equals("MODIFY")) {
-	                String id = arr[2];
-	                int size = Integer.parseInt(arr[3]);
-	                int price = Integer.parseInt(arr[4]);
-	                modifyByID(orders, id, size, price);
+	                modifyByID(orders, columnArr[2], Integer.parseInt(columnArr[3]), Integer.parseInt(columnArr[4]));
 	            }
 	            else if (operation.equals("CANCEL")) {
-	                String id = arr[2];
-	                removeByID(orders, id);
+	                removeByID(orders, columnArr[2]);
 	            }
 	            else if (operation.equals("RESET")) {
 	                orders.clear();
@@ -49,27 +52,14 @@ public class OHLC {
 	            }
 	            line = scan.nextLine();
 	        }
-
-        ordersSortedByPrice = copyList(orders);
-        Collections.sort(ordersSortedByPrice, new PriceTimeComparator());
-        System.out.println("Orders(" + orders.size() +"): ");
-        printOrders(orders);
-        System.out.println("");
-        System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
-        printOrders(ordersSortedByPrice);
-        System.out.println("OUTPUT:");
-        produceOutput(startTime, orders, ordersSortedByPrice);
-        ordersSortedByPrice = executeOrders(ordersSortedByPrice);
-        // Need to do this, as orders has been updated, but ordersSortedByPrice needs to update correspondingly
-        orders = copyList(ordersSortedByPrice);
-        Collections.sort(orders, new TimeComparator());
-        System.out.println("After execution:");
-        System.out.println("Orders(" + orders.size() +"): ");
-        printOrders(orders);
-        System.out.println("");
-        System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
-            printOrders(ordersSortedByPrice);
-            startTime += 300;
+	        ordersSortedByPrice = copyList(orders);
+	        Collections.sort(ordersSortedByPrice, new PriceTimeComparator());
+	        produceOutput(startTime, orders, ordersSortedByPrice);
+	        ordersSortedByPrice = executeOrders(ordersSortedByPrice);
+	        // Need to do this, as orders has been updated, but ordersSortedByPrice needs to update accordingly
+	        orders = copyList(ordersSortedByPrice);
+	        Collections.sort(orders, new TimeComparator());
+	        startTime += 300; // new 5-min period starts now
         }
         scan.close();
   }
@@ -79,7 +69,7 @@ public class OHLC {
    * @param orders List of orders to be used.
    * @param id The ID of the order to be removed.
    */
-  public static void removeByID(List<Order> orders, String id) {
+  private static void removeByID(List<Order> orders, String id) {
       for (int i = 0; i < orders.size(); ++i) {
     	  	  Order o = orders.get(i);
           if (o.getID().equals(id)) {
@@ -95,7 +85,7 @@ public class OHLC {
    * @param size The size that the order should have after modification.
    * @param price The price the order should have after modification.
    */
-  public static void modifyByID(List<Order> orders, String id, int size, int price) {
+  private static void modifyByID(List<Order> orders, String id, int size, int price) {
       for (int i = 0; i < orders.size(); ++i) {
     	  	  Order o = orders.get(i);
           if (o.getID().equals(id)) {
@@ -109,7 +99,7 @@ public class OHLC {
    * This method can be used for debugging and it prints all orders in a given list of Order objects.
    * @param orders The list of orders to be printed out.
    */
-  public static void printOrders (List<Order> orders) {
+  private static void printOrders (List<Order> orders) {
 	  for (int i=0; i < orders.size(); ++i) {
 		  System.out.println("Time: " + orders.get(i).getTime() + ", OrderID: " + orders.get(i).getID() + ", Side: " + orders.get(i).getSide() + ", Size: " + orders.get(i).getSize()+ ", Price: " + orders.get(i).getPrice());
 	  }
@@ -120,7 +110,7 @@ public class OHLC {
    * @param originalList The list of Order objects to be copied.
    * @return The new List.
    */
-  public static List<Order> copyList (List<Order> originalList) {
+  private static List<Order> copyList (List<Order> originalList) {
       List<Order> copy = new ArrayList<Order>();
       for (int i = 0; i<originalList.size(); ++i) {
 	    	  	Order o = originalList.get(i);
@@ -139,7 +129,7 @@ public class OHLC {
    * @param orders The list of orders sorted by time.
    * @param ordersSortedByPrice The list of orders sorted by price(descending)-time.
    */
-  public static void produceOutput(int startTime, List<Order> orders, List<Order> ordersSortedByPrice) {
+  private static void produceOutput(int startTime, List<Order> orders, List<Order> ordersSortedByPrice) {
       // 1) OPEN: previous CLOSE or avg of first buy price and first sell price if no previous CLOSE exists
       int OPEN = -1;
 	  if (previousClose == -1) { // no previous CLOSE
@@ -235,7 +225,9 @@ public class OHLC {
               LOW = newLow;
           }
       }
-      System.out.println(startTime + "\t" + OPEN + "\t" + HIGH + "\t" + LOW + "\t" + CLOSE + "\n");
+      if (OPEN != -1 && HIGH != -1 && LOW != -1 && CLOSE != -1) { // "Record should not be present if the midpoint price was not defined for the interval"
+          System.out.println(startTime + "\t" + OPEN + "\t" + HIGH + "\t" + LOW + "\t" + CLOSE);
+      }
       previousClose = CLOSE;
   }
 
@@ -245,7 +237,7 @@ public class OHLC {
    * @param ordersSortedByPrice The list of Order objects sorted by price.
    * @return The updated list of Order objects sorted by price.
    */
-  public static List<Order> executeOrders(List<Order> ordersSortedByPrice) {
+  private static List<Order> executeOrders(List<Order> ordersSortedByPrice) {
       for (int i = 0; i < ordersSortedByPrice.size(); ++i) { // looping from highest price order to lowest
           Order o1 = ordersSortedByPrice.get(i);
           if (o1.getSide().equals("S")) { // find sell orders
@@ -272,48 +264,13 @@ public class OHLC {
       }
       return ordersSortedByPrice;
   }
-  
-  /**
-   * This is a Comparator implementation to sort Order objects by Time (ascending).
-   * @author noah-vincenznoeh
-   *
-   */
-  public static class TimeComparator implements Comparator<Order> {
-	  	@Override
-	    public int compare(Order a, Order b) {
-	  		Integer time1 = a.getTime();
-	  		Integer time2 = b.getTime();
-	  		return time1.compareTo(time2);
-	    }
-  }
-  
-  /**
-   * This is a Comparator implementation to sort Order objects by Price (descending) followed by Time (ascending).
-   * @author noah-vincenznoeh
-   *
-   */
-  public static class PriceTimeComparator implements Comparator<Order> {
-	  	@Override
-	    public int compare(Order a, Order b) {
-	  		//price is descending - hence why we use Order b first
-	  		Integer price1 = b.getPrice();
-	  		Integer price2 = a.getPrice();
-	  		int firstComparison = price1.compareTo(price2);
-	  		if (firstComparison != 0) {
-	  			return firstComparison;
-	  		} 
-	  		Integer time1 = a.getTime();
-	  		Integer time2 = b.getTime();
-	  		return time1.compareTo(time2);
-	    }
-  }
 
   /**
    * This class represents an Order object. Each order has a timestamp (Unix seconds), an operation, a unique id, a side (B or S), a size and a corresponding price.
    * @author noah-vincenznoeh
    *
    */
-  public static class Order implements Cloneable {
+  private static class Order implements Cloneable {
     private int time;
     private String id;
     private String side;
@@ -329,7 +286,7 @@ public class OHLC {
      * @param size The size of the order.
      * @param price The price of the order.
      */
-    public Order(int time, String id, String side, int size, int price) {
+    private Order(int time, String id, String side, int size, int price) {
       this.time = time;
       this.id = id;
       this.side = side;
@@ -341,7 +298,7 @@ public class OHLC {
      * This method returns the time of the Order object.
      * @return Order time.
      */
-    public int getTime() {
+    private int getTime() {
       return time;
     }
 
@@ -349,7 +306,7 @@ public class OHLC {
      * This method returns the id of the Order object.
      * @return Order id.
      */
-    public String getID() {
+    private String getID() {
       return id;
     }
 
@@ -357,7 +314,7 @@ public class OHLC {
      * This method returns the side of the Order object.
      * @return Order side.
      */
-    public String getSide() {
+    private String getSide() {
       return side;
     }
 
@@ -365,7 +322,7 @@ public class OHLC {
      * This method returns the size of the Order object.
      * @return Order size.
      */
-    public int getSize() {
+    private int getSize() {
       return size;
     }
 
@@ -373,7 +330,7 @@ public class OHLC {
      * This method returns the price of the Order object.
      * @return Order price.
      */
-    public int getPrice() {
+    private int getPrice() {
       return price;
     }
 
@@ -381,7 +338,7 @@ public class OHLC {
      * This method sets the size of the Order object.
      * @param sizeIn The size the Order should have.
      */
-    public void setSize(int sizeIn) {
+    private void setSize(int sizeIn) {
       size = sizeIn;
     }
 
@@ -389,7 +346,7 @@ public class OHLC {
      * This method sets the price of the Order object.
      * @param priceIn The price the Order should have.
      */
-    public void setPrice(int priceIn) {
+    private void setPrice(int priceIn) {
       price = priceIn;
     }
     
@@ -398,4 +355,41 @@ public class OHLC {
         return super.clone();
     }
   }
+  
+  /**
+   * This is a Comparator implementation to sort Order objects by Time (ascending).
+   * @author noah-vincenznoeh
+   *
+   */
+  private static class TimeComparator implements Comparator<Order> {
+	  	@Override
+	    public int compare(Order a, Order b) {
+	  		Integer time1 = a.getTime();
+	  		Integer time2 = b.getTime();
+	  		return time1.compareTo(time2);
+	    }
+  }
+  
+  /**
+   * This is a Comparator implementation to sort Order objects by Price (descending) followed by Time (ascending).
+   * @author noah-vincenznoeh
+   *
+   */
+  private static class PriceTimeComparator implements Comparator<Order> {
+	  	@Override
+	    public int compare(Order a, Order b) {
+	  		//price is descending - hence why we use Order b first
+	  		Integer price1 = b.getPrice();
+	  		Integer price2 = a.getPrice();
+	  		int firstComparison = price1.compareTo(price2);
+	  		if (firstComparison != 0) {
+	  			return firstComparison;
+	  		} 
+	  		Integer time1 = a.getTime();
+	  		Integer time2 = b.getTime();
+	  		return time1.compareTo(time2);
+	    }
+  }
+  
+  
 }
