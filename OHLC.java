@@ -1,93 +1,84 @@
 import java.util.*;
 
-
-/* TODO:
-1) parse through input and store all elems in List<String>
-2) continue until time period has passed (start + 300)
-3) produce output (Open=first buy & first sell avg, high=highest 2 buy prices (unless/close is higher), low=lowest 2 sell prices (unless/close is lower), close=last buy & last sell)
-4) execute commands
-5) continue with next period
-*/
-
+/**
+ * This class represents an Open-High-Low-Close generator from input data.
+ * @author noah-vincenznoeh
+ *
+ */
 public class OHLC {
 
 	private static int previousClose = -1;
-    private static int startTime = 1506999900;
 
   public static void main(String[] args) {
+		int startTime = 1506999900;
         List<Order> orders = new ArrayList<Order>();
         List<Order> ordersSortedByPrice = new ArrayList<Order>();
         Scanner scan = new Scanner(System.in);
         String line = scan.nextLine();
-        while (!line.equals("")) {
-            String[] arr = line.split("\\s+");
+        while (!line.equals("")) { // loop while input is given 
+        		String[] arr = line.split("\\s+"); // split input by columns
             int currentTime = Integer.parseInt(arr[0]);
-           
-            while (!line.equals("")) {
-            		arr = line.split("\\s+");
-                currentTime = Integer.parseInt(arr[0]);
-                System.out.println("CurrentTime: " + currentTime);
-                System.out.println("Current - start time: " + (currentTime - startTime));
-                if ((currentTime - startTime) >= 300) {
-                		break;
-                }
-                String operation = arr[1];
-                System.out.println("Operation: " + operation);
-                if (operation.equals("ADD")) {
-                    String id = arr[2];
-                    String side = arr[3];
-                    int size = Integer.parseInt(arr[4]);
-                    int price = Integer.parseInt(arr[5]);
-                    Order o = new Order(currentTime, operation, id, side, size, price);
-                    orders.add(o);
-                }
-                else if (operation.equals("MODIFY")) {
-                    String id = arr[2];
-                    int size = Integer.parseInt(arr[3]);
-                    int price = Integer.parseInt(arr[4]);
-                    for (int i = 0; i < orders.size(); ++i) {
-                        Order o = orders.get(i);
-                        if(o.getID().equals(id)) {
-                            o.setSize(size);
-                            o.setPrice(price);
-                        }
-                    }
-                }
-                else if (operation.equals("CANCEL")) {
-                    String id = arr[2];
-                    removeByID(orders, id);
-                }
-                else if (operation.equals("RESET")) {
-                    orders.clear();
-                    previousClose = -1;
-                }
-                line = scan.nextLine();
-            }
+	        while (!line.equals("")) { // loop while being within period
+	        		// split input by columns
+	        		arr = line.split("\\s+"); 
+	            currentTime = Integer.parseInt(arr[0]);
+	            if ((currentTime - startTime) >= 300) {
+	            		break;
+	            }
+	            String operation = arr[1];
+	            if (operation.equals("ADD")) {
+	                String id = arr[2];
+	                String side = arr[3];
+	                int size = Integer.parseInt(arr[4]);
+	                int price = Integer.parseInt(arr[5]);
+	                orders.add(new Order(currentTime, id, side, size, price));
+	            }
+	            else if (operation.equals("MODIFY")) {
+	                String id = arr[2];
+	                int size = Integer.parseInt(arr[3]);
+	                int price = Integer.parseInt(arr[4]);
+	                modifyByID(orders, id, size, price);
+	            }
+	            else if (operation.equals("CANCEL")) {
+	                String id = arr[2];
+	                removeByID(orders, id);
+	            }
+	            else if (operation.equals("RESET")) {
+	                orders.clear();
+	                previousClose = -1;
+	            }
+	            line = scan.nextLine();
+	        }
 
-            ordersSortedByPrice = copyList(orders);
-            Collections.sort(ordersSortedByPrice);
-            System.out.println("Orders(" + orders.size() +"): ");
-            printList(orders);
-            System.out.println("");
-            System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
-            printList(ordersSortedByPrice);
-            System.out.println("OUTPUT:");
-            produceOutput(startTime, orders, ordersSortedByPrice);
-            ordersSortedByPrice = executeOrders(ordersSortedByPrice);
-            // Need to do this, as orders has been updated, but ordersSortedByPrice needs to update correspondingly
-            orders = copyList(ordersSortedByPrice);
-            Collections.sort(orders, new TimeComparator());
-            System.out.println("After execution:");
-            System.out.println("Orders(" + orders.size() +"): ");
-            printList(orders);
-            System.out.println("");
-            System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
-            printList(ordersSortedByPrice);
+        ordersSortedByPrice = copyList(orders);
+        Collections.sort(ordersSortedByPrice, new PriceTimeComparator());
+        System.out.println("Orders(" + orders.size() +"): ");
+        printOrders(orders);
+        System.out.println("");
+        System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
+        printOrders(ordersSortedByPrice);
+        System.out.println("OUTPUT:");
+        produceOutput(startTime, orders, ordersSortedByPrice);
+        ordersSortedByPrice = executeOrders(ordersSortedByPrice);
+        // Need to do this, as orders has been updated, but ordersSortedByPrice needs to update correspondingly
+        orders = copyList(ordersSortedByPrice);
+        Collections.sort(orders, new TimeComparator());
+        System.out.println("After execution:");
+        System.out.println("Orders(" + orders.size() +"): ");
+        printOrders(orders);
+        System.out.println("");
+        System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
+            printOrders(ordersSortedByPrice);
             startTime += 300;
         }
         scan.close();
   }
 
+  /**
+   * This method removes a specific order from the list of orders.
+   * @param orders List of orders to be used.
+   * @param id The ID of the order to be removed.
+   */
   public static void removeByID(List<Order> orders, String id) {
       for (int i = 0; i < orders.size(); ++i) {
     	  	  Order o = orders.get(i);
@@ -97,48 +88,77 @@ public class OHLC {
       }
   }
   
-  public static void printList (List<Order> orders) {
+  /**
+   * This method modifies a specific order in the list of orders.
+   * @param orders List of orders to be used.
+   * @param id The ID of the order to be modified.
+   * @param size The size that the order should have after modification.
+   * @param price The price the order should have after modification.
+   */
+  public static void modifyByID(List<Order> orders, String id, int size, int price) {
+      for (int i = 0; i < orders.size(); ++i) {
+    	  	  Order o = orders.get(i);
+          if (o.getID().equals(id)) {
+        	  	  o.setSize(size);
+              o.setPrice(price);
+          }
+      }
+  }
+  
+  /**
+   * This method can be used for debugging and it prints all orders in a given list of Order objects.
+   * @param orders The list of orders to be printed out.
+   */
+  public static void printOrders (List<Order> orders) {
 	  for (int i=0; i < orders.size(); ++i) {
 		  System.out.println("Time: " + orders.get(i).getTime() + ", OrderID: " + orders.get(i).getID() + ", Side: " + orders.get(i).getSide() + ", Size: " + orders.get(i).getSize()+ ", Price: " + orders.get(i).getPrice());
 	  }
   }
-
+  
+  /**
+   * This method is used to make a copy of a given List of Order objects without referencing the same objects.
+   * @param originalList The list of Order objects to be copied.
+   * @return The new List.
+   */
   public static List<Order> copyList (List<Order> originalList) {
       List<Order> copy = new ArrayList<Order>();
-      for (Order o : originalList) {
-          try {
-			copy.add((Order) o.clone());
-		} catch (CloneNotSupportedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+      for (int i = 0; i<originalList.size(); ++i) {
+	    	  	Order o = originalList.get(i);
+	        try {
+				copy.add((Order) o.clone());
+			} catch (CloneNotSupportedException e) {
+				e.printStackTrace();
+			}
       }
       return copy;
   }
 
+  /**
+   * This method is used to print the output in the form of <TIME>\t<OPEN>\t<HIGH>\t<LOW>\t<CLOSE>\n
+   * @param startTime The start time of the currently running period.
+   * @param orders The list of orders sorted by time.
+   * @param ordersSortedByPrice The list of orders sorted by price(descending)-time.
+   */
   public static void produceOutput(int startTime, List<Order> orders, List<Order> ordersSortedByPrice) {
-      // TODO: use ordersSortedByPrice to access highest buy and sell price quickly
-      // 1) OPEN: previous CLOSE or avg of first buy price and first sell price if no previous CLOSE
+      // 1) OPEN: previous CLOSE or avg of first buy price and first sell price if no previous CLOSE exists
       int OPEN = -1;
-	  if (previousClose == -1) { //no previousClose
+	  if (previousClose == -1) { // no previous CLOSE
 		  int firstBuyPrice = -1;
 	      int firstSellPrice = -1;
 	      for (int i = 0; i < orders.size(); ++i) {
 	          Order o = orders.get(i);
 	          if (o.getSide().equals("B") && o.getSize() != 0) {
-	              firstBuyPrice = o.getPrice();
-	              break;
+	        	  	firstBuyPrice = o.getPrice();
 	          }
-	      }
-	      for (int i = 0; i < orders.size(); ++i) {
-	          Order o = orders.get(i);
-	          if (o.getSide().equals("S") && o.getSize() != 0) {
-	              firstSellPrice = o.getPrice();
-	              break;
+	          else if (o.getSide().equals("S") && o.getSize() != 0) {
+	        	  	firstSellPrice = o.getPrice();
+	          }
+	          if (firstBuyPrice != -1 && firstSellPrice != -1) {
+	        	  	break;
 	          }
 	      }
 	      if (firstBuyPrice != -1 && firstSellPrice != -1) {
-	          OPEN = (int) Math.floor((firstBuyPrice + firstSellPrice) / 2);
+	          OPEN = (int) Math.floor((firstBuyPrice + firstSellPrice) / 2); // otherwise OPEN will be -1 (= undefined)
 	      }
 	  } else {
 		  OPEN = previousClose;
@@ -151,33 +171,30 @@ public class OHLC {
       for (int i = orders.size() - 1; i >= 0; --i) {
           Order o = orders.get(i);
           if (o.getSide().equals("B") && o.getSize() != 0) {
-              lastBuyPrice = o.getPrice();
-              break;
+        	  	lastBuyPrice = o.getPrice();
           }
-      }
-      for (int i = orders.size() - 1; i >= 0; --i) {
-          Order o = orders.get(i);
-          if (o.getSide().equals("S") && o.getSize() != 0) {
-              lastSellPrice = o.getPrice();
-              break;
+          else if (o.getSide().equals("S") && o.getSize() != 0) {
+        	  	lastSellPrice = o.getPrice();
+          }
+          if (lastBuyPrice != -1 && lastSellPrice != -1) {
+        	  	break;
           }
       }
       if (lastBuyPrice != -1 && lastSellPrice != -1) {
           CLOSE = (int) Math.floor((lastBuyPrice + lastSellPrice) / 2);
       }
       // 3) HIGH: avg of two highest buy prices
-      // TODO: sort first to make more efficient
       int HIGH = Math.max(OPEN, CLOSE);
-      List<Integer> twoHighestBuyPrices = new ArrayList<Integer>(); // TODO: use array to make more efficient
+      List<Integer> twoHighestBuyPrices = new ArrayList<Integer>(); // TODO: use array to make more efficient, since Arrays.sort() is quicker than Collections.sort()
       for (int i = 0; i < ordersSortedByPrice.size(); ++i) {
           Order o = ordersSortedByPrice.get(i);
           if (o.getSide().equals("B") && o.getSize() != 0) {
-              if (twoHighestBuyPrices.size() == 0) {  // ArrayList not full yet
+              if (twoHighestBuyPrices.size() == 0) {  // ArrayList is empty -> just add to the list
                   twoHighestBuyPrices.add(o.getPrice());
-              } else if (twoHighestBuyPrices.size() == 1) {
+              } else if (twoHighestBuyPrices.size() == 1) { // ArrayList has one elem -> add to list and sort
                   twoHighestBuyPrices.add(o.getPrice());
                   Collections.sort(twoHighestBuyPrices);
-              } else {
+              } else { // ArrayList has two elems with highest being at index 1
                   if (o.getPrice() > twoHighestBuyPrices.get(0)) {
                       twoHighestBuyPrices.add(1, o.getPrice());
                       twoHighestBuyPrices.remove(0);
@@ -198,12 +215,12 @@ public class OHLC {
       for (int i = ordersSortedByPrice.size() - 1; i >= 0; --i) {
           Order o = ordersSortedByPrice.get(i);
           if (o.getSide().equals("S") && o.getSize() != 0) {
-              if (twoLowestSellPrices.size() == 0) {  // ArrayList not full yet
+              if (twoLowestSellPrices.size() == 0) {  // ArrayList is empty -> just add to the list
                   twoLowestSellPrices.add(o.getPrice());
-              } else if (twoLowestSellPrices.size() == 1) {
+              } else if (twoLowestSellPrices.size() == 1) { // ArrayList has one elem -> add to list and sort
                   twoLowestSellPrices.add(o.getPrice());
                   Collections.sort(twoLowestSellPrices);
-              } else {
+              } else { // ArrayList has two elems with highest being at index 1
                   if (o.getPrice() < twoLowestSellPrices.get(1)) {
                       twoLowestSellPrices.add(1, o.getPrice());
                       twoLowestSellPrices.remove(2);
@@ -222,37 +239,32 @@ public class OHLC {
       previousClose = CLOSE;
   }
 
+  /**
+   * This method is used to execute the orders in the book. It goes through all sell orders and finds buy orders for trade execution. It uses the Orders sorted by Price, because
+   * Orders with best price are executed first.
+   * @param ordersSortedByPrice The list of Order objects sorted by price.
+   * @return The updated list of Order objects sorted by price.
+   */
   public static List<Order> executeOrders(List<Order> ordersSortedByPrice) {
-      // go through all sell orders
-      // look at sell amount and find buy amounts starting with highest before sell - decrease size
-      // Sort orders by high
-      // TODO: this does not work as we need to continue working with 'orders' in next round, however, we are only modyfying ordersSortedByPrice
-      // maybe make orders a hashmap<time,Order>? can access elems O(1)
       for (int i = 0; i < ordersSortedByPrice.size(); ++i) { // looping from highest price order to lowest
           Order o1 = ordersSortedByPrice.get(i);
-          if (o1.getSide().equals("S")) {
+          if (o1.getSide().equals("S")) { // find sell orders
               int o1Time = o1.getTime();
               String o1ID = o1.getID();
-              System.out.println("REDUCING SELL ORDER " + o1ID);
-              for (int j = 0; j < ordersSortedByPrice.size(); ++j) {
+              for (int j = 0; j < ordersSortedByPrice.size(); ++j) { // find corresponding buy orders to execute trade
             	  	Order o2 = ordersSortedByPrice.get(j);
         	  		if (o2.getSide().equals("B") && (o2.getTime() <= o1Time)) { // reduce the size of this buy order
         	  			int o2Size = o2.getSize();
         	  			String o2ID = o2.getID();
-        	            System.out.println("REDUCING BUY ORDER " + o2ID);
         	  			if (o2Size > o1.getSize()) {
-            	            System.out.println("O2 is larger than O1!");
-        	  				reduceSizeByID(o2ID, o2Size - o1.getSize(), ordersSortedByPrice);
-        	  				reduceSizeByID(o1ID, 0, ordersSortedByPrice);
+        	  				modifyByID(ordersSortedByPrice, o2ID, o2Size - o1.getSize(), o2.getPrice());
+        	  				modifyByID(ordersSortedByPrice, o1ID, 0, o1.getPrice());
         	  			} else if (o2Size <= o1.getSize()) {
-            	            System.out.println("O2 is smaller than O1!");
-        	  				reduceSizeByID(o2ID, 0, ordersSortedByPrice);
-        	  				reduceSizeByID(o1ID, o1.getSize() - o2Size, ordersSortedByPrice);
-        	  				System.out.println("New o1 size: " + o1.getSize());
-        	  				System.out.println("New o2 size: " + o2.getSize());
+        	  				modifyByID(ordersSortedByPrice, o2ID, 0, o2.getPrice());
+        	  				modifyByID(ordersSortedByPrice, o1ID, o1.getSize() - o2Size, o1.getPrice());
         	  			}
         	  		}
-        	  		if (o1.getSize() == 0) {
+        	  		if (o1.getSize() == 0) { // we have completely filled the sell order
     	  				break;
     	  			}
               }
@@ -260,93 +272,130 @@ public class OHLC {
       }
       return ordersSortedByPrice;
   }
-
-  public static void reduceSizeByID(String id, int newSize, List<Order> orders) {
-	  for (int i=0; i<orders.size(); ++i) {
-		  Order o = orders.get(i);
-		  if (o.getID().equals(id)) {
-			  o.setSize(newSize);
-		  }
-	  }
-  }
   
+  /**
+   * This is a Comparator implementation to sort Order objects by Time (ascending).
+   * @author noah-vincenznoeh
+   *
+   */
   public static class TimeComparator implements Comparator<Order> {
 	  	@Override
 	    public int compare(Order a, Order b) {
-	        return a.getTime() < b.getTime() ? -1 : a.getTime() == b.getTime() ? 0 : 1;
+	  		Integer time1 = a.getTime();
+	  		Integer time2 = b.getTime();
+	  		return time1.compareTo(time2);
 	    }
-	}
+  }
+  
+  /**
+   * This is a Comparator implementation to sort Order objects by Price (descending) followed by Time (ascending).
+   * @author noah-vincenznoeh
+   *
+   */
+  public static class PriceTimeComparator implements Comparator<Order> {
+	  	@Override
+	    public int compare(Order a, Order b) {
+	  		//price is descending - hence why we use Order b first
+	  		Integer price1 = b.getPrice();
+	  		Integer price2 = a.getPrice();
+	  		int firstComparison = price1.compareTo(price2);
+	  		if (firstComparison != 0) {
+	  			return firstComparison;
+	  		} 
+	  		Integer time1 = a.getTime();
+	  		Integer time2 = b.getTime();
+	  		return time1.compareTo(time2);
+	    }
+  }
 
-  public static class Order implements Comparable<Order>, Cloneable {
+  /**
+   * This class represents an Order object. Each order has a timestamp (Unix seconds), an operation, a unique id, a side (B or S), a size and a corresponding price.
+   * @author noah-vincenznoeh
+   *
+   */
+  public static class Order implements Cloneable {
     private int time;
-    private String operation;
     private String id;
     private String side;
     private int size;
     private int price;
 
-    public Order(int time, String operation, String id, String side, int size, int price) {
+    /**
+     * This is the constructor for an Order object.
+     * @param time The time the order was received.
+     * @param operation The Order operation {ADD, MODIFY, RESET, CANCEL}.
+     * @param id The unique order id.
+     * @param side This specifies whether the order is a Buy or Sell order (B or S correspondingly)
+     * @param size The size of the order.
+     * @param price The price of the order.
+     */
+    public Order(int time, String id, String side, int size, int price) {
       this.time = time;
-      this.operation = operation;
       this.id = id;
       this.side = side;
       this.size = size;
       this.price = price;
     }
 
+    /**
+     * This method returns the time of the Order object.
+     * @return Order time.
+     */
     public int getTime() {
       return time;
     }
 
-    public String getOperation() {
-      return operation;
-    }
-
+    /**
+     * This method returns the id of the Order object.
+     * @return Order id.
+     */
     public String getID() {
       return id;
     }
 
+    /**
+     * This method returns the side of the Order object.
+     * @return Order side.
+     */
     public String getSide() {
       return side;
     }
 
+    /**
+     * This method returns the size of the Order object.
+     * @return Order size.
+     */
     public int getSize() {
       return size;
     }
 
+    /**
+     * This method returns the price of the Order object.
+     * @return Order price.
+     */
     public int getPrice() {
       return price;
     }
 
+    /**
+     * This method sets the size of the Order object.
+     * @param sizeIn The size the Order should have.
+     */
     public void setSize(int sizeIn) {
       size = sizeIn;
     }
 
+    /**
+     * This method sets the price of the Order object.
+     * @param priceIn The price the Order should have.
+     */
     public void setPrice(int priceIn) {
       price = priceIn;
-    }
-
-    @Override
-    public int compareTo(Order o) {
-
-        // price is descending - hence why using Order o first
-	    	Integer price1 = o.getPrice();
-	    	Integer price2 = this.getPrice();
-        int firstComparison = price1.compareTo(price2);
-        if (firstComparison != 0) {
-           return firstComparison;
-        }
-        Integer time1 = this.getTime();
-        Integer time2 = o.getTime();
-        int secondComparison = time1.compareTo(time2);
-        return secondComparison;
     }
     
     @Override
     protected Object clone() throws CloneNotSupportedException {
-
         return super.clone();
     }
-
   }
 }
