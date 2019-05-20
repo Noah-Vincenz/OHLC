@@ -58,9 +58,9 @@ public class OHLCData {
                         break;
                 }
             }
+            produceOutput(orders, startTime);
+            executeOrders(orders);
             startTime = currentTime;
-            produceOutput();
-            executeOrders();
             line = scan.nextLine();
         }
         scan.close();
@@ -74,7 +74,7 @@ public class OHLCData {
       }
   }
 
-  public produceOutput(List<Order> orders, String id) {
+  public produceOutput(int startTime, List<Order> orders) {
       // 1) OPEN: avg of first buy price and first sell price
       int firstBuyPrice = -1;
       int firstSellPrice = -1;
@@ -117,8 +117,56 @@ public class OHLCData {
       if (lastBuyPrice != -1 && lastSellPrice != -1) {
           CLOSE = (int) Math.floor((lastBuyPrice + lastSellPrice) / 2);
       }
-      
-      System.out.println("");
+      // 3) HIGH: avg of two highest buy prices
+      // TODO: sort first to make more efficient
+      int HIGH = Math.max(OPEN, CLOSE);
+      List<Integer> twoHighestBuyPrices = new ArrayList<Integer>(); // TODO: use array to make more efficient
+      for (int i = 0; i < orders.size(); ++i) {
+          Order o = orders.get(i);
+          if (o.getSide().equals("B")) {
+              if (twoHighestBuyPrices.size() == 0) {  // ArrayList not full yet
+                  twoHighestBuyPrices.add(o.getPrice());
+              } else if (twoHighestBuyPrices.size() == 1) {
+                  twoHighestBuyPrices.add(o.getPrice());
+                  Collections.sort(twoHighestBuyPrices);
+              } else {
+                  if (o.getPrice() > twoHighestBuyPrices.get(0)) {
+                      twoHighestBuyPrices.add(1, o.getPrice());
+                      twoHighestBuyPrices.remove(0);
+                      Collections.sort(twoHighestBuyPrices);
+                  }
+              }
+          }
+      }
+      int newHigh = (twoHighestBuyPrices.get(0) + twoHighestBuyPrices.get(1)) / 2;
+      if (newHigh > HIGH) {
+          HIGH = newHigh;
+      }
+      // 4) LOW: avg of two lowest sell prices
+      int LOW = Math.min(OPEN, CLOSE);
+      List<Integer> twoLowestSellPrices = new ArrayList<Integer>(); // TODO: use array to make more efficient
+      for (int i = 0; i < orders.size(); ++i) {
+          Order o = orders.get(i);
+          if (o.getSide().equals("S")) {
+              if (twoLowestSellPrices.size() == 0) {  // ArrayList not full yet
+                  twoLowestSellPrices.add(o.getPrice());
+              } else if (twoLowestSellPrices.size() == 1) {
+                  twoLowestSellPrices.add(o.getPrice());
+                  Collections.sort(twoLowestSellPrices);
+              } else {
+                  if (o.getPrice() < twoLowestSellPrices.get(1)) {
+                      twoLowestSellPrices.add(1, o.getPrice());
+                      twoLowestSellPrices.remove(2);
+                      Collections.sort(twoLowestSellPrices);
+                  }
+              }
+          }
+      }
+      int newLow = (twoLowestSellPrices.get(0) + twoLowestSellPrices.get(1)) / 2;
+      if (newLow > LOW) {
+          LOW = newLow;
+      }
+      System.out.println(startTime + "\t" + OPEN + "\t" + HIGH + "\t" + LOW + "\t" + CLOSE + "\n");
   }
 
   public class Order {
