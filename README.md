@@ -1,8 +1,6 @@
 # Open-High-Low-Close Java Program
 
-This Java program uses buy and sell trading data passed in via the Java standard input and produces the corresponding OPEN-HIGH-LOW-CLOSE output for 5 minute periods (300 seconds in UNIX time format). The list of sample data via the Java standard input should be in the following format:
-Time \t OPCode \t OrderID \t Side \t Size \t Price \n
-where OPCode is one of the following:
+This Java program uses buy and sell trading data passed in via the Java standard input and produces the corresponding OPEN-HIGH-LOW-CLOSE output for 5 minute periods (300 seconds in UNIX time format). The list of sample data via the Java standard input should be in the following format: Time \t OPCode \t OrderID \t Side \t Size \t Price \n, where OPCode is one of the following:
   * ADD - add an order at a price and size
   * MODIFY - modify an order to a new price and size. Note that size is new open size in the book (i.e. not including whatever trades have already occurred)
   * CANCEL - cancel an order
@@ -34,7 +32,7 @@ An example input would be the following:
 1507000200  498 498 475 475
 ```
 
-##Running the Program
+## Running the Program
 
 cd into the directory containing the OHLC.java file and run:
 
