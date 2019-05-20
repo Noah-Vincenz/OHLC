@@ -8,7 +8,7 @@ This Java program uses buy and sell trading data passed in via the Java standard
   * RESET - reset state of the book (all existing orders should be cleared)
   
 The output is in the following format: <br />
-Time \t Open \t High \t Low \t Close \n
+`Time \t Open \t High \t Low \t Close \n`
 
 An example input would be the following:
 
