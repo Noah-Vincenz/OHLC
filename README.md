@@ -13,7 +13,7 @@ Time \t Open \t High \t Low \t Close \n
 
 An example input would be the following:
 
-`
+```
 1507000000	RESET
 1507000001	ADD	1	B	10000	495
 1507000002	ADD	2	S	10000	501
@@ -25,21 +25,23 @@ An example input would be the following:
 1507000302	MODIFY	2		3000	479
 1507000303	MODIFY	3		5000	470
 1507000304	ADD	7	S	4000	481
-`
+```
 
 ... and this produces the following output via the Java standard output:
 
-`
+```
 1506999900  498 500 498 498
 1507000200  498 498 475 475
-`
+```
 
-## Running the Program
+##Running the Program
 
 cd into the directory containing the OHLC.java file and run:
 
+```
 javac OHLC.java
 java OHLC
+```
 
 ... and pass in your data via the terminal
 
