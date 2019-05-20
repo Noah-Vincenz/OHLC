@@ -9,12 +9,12 @@ import java.util.*;
 5) continue with next period
 */
 
-public class OHLCData {
+public class OHLC {
 
   public static void main(String[] args) {
         List<Integer> times = new ArrayList<Integer>();
         List<Integer> prices = new ArrayList<Integer>();
-        List<Order> orders = new ArrayList<String>();
+        List<Order> orders = new ArrayList<Order>();
         Scanner scan = new Scanner(System.in);
         int startTime = 1506999900;
         String line = scan.nextLine();
@@ -25,40 +25,35 @@ public class OHLCData {
 
             while ((currentTime - startTime) < 300) {
                 String operation = arr[1];
-                switch (operation) {
-                    case "ADD":
-                        String id = arr[2];
-                        String side = arr[3];
-                        int size = Integer.parseInt(arr[4]);
-                        int price = Integer.parseInt(arr[5]);
-                        Order o = new Order(currentTime, operation, id, side, size, price);
-                        orders.add(o);
-                        break;
-
-                    case "MODIFY":
-                        String id = arr[2];
-                        int size = Integer.parseInt(arr[3]);
-                        int price = Integer.parseInt(arr[4]);
-                        for (int i = 0; i < orders.size(); ++i) {
-                            Order o = orders.get(i);
-                            if(o.getID().equals(id)) {
-                                o.setSize(size);
-                                o.setPrice(price);
-                            }
+                if (operation.equals("AND")) {
+                    String id = arr[2];
+                    String side = arr[3];
+                    int size = Integer.parseInt(arr[4]);
+                    int price = Integer.parseInt(arr[5]);
+                    Order o = new Order(currentTime, operation, id, side, size, price);
+                    orders.add(o);
+                }
+                else if (operation.equals("MODIFY")) {
+                    String id = arr[2];
+                    int size = Integer.parseInt(arr[3]);
+                    int price = Integer.parseInt(arr[4]);
+                    for (int i = 0; i < orders.size(); ++i) {
+                        Order o = orders.get(i);
+                        if(o.getID().equals(id)) {
+                            o.setSize(size);
+                            o.setPrice(price);
                         }
-                        break;
-
-                    case "CANCEL":
-                        String id = arr[2];
-                        removeByID(orders, id);
-                        break;
-
-                    case "RESET":
-                        orders.clear();
-                        break;
+                    }
+                }
+                else if (operation.equals("CANCEL")) {
+                    String id = arr[2];
+                    removeByID(orders, id);
+                }
+                else if (operation.equals("RESET")) {
+                    orders.clear();
                 }
             }
-            produceOutput(orders, startTime);
+            produceOutput(startTime, orders);
             executeOrders(orders);
             startTime = currentTime;
             line = scan.nextLine();
@@ -66,7 +61,7 @@ public class OHLCData {
         scan.close();
   }
 
-  public removeByID(List<Order> orders, String id) {
+  public static void removeByID(List<Order> orders, String id) {
       for (Order o : orders) {
           if (o.getID().equals(id)) {
               orders.remove(o);
@@ -74,21 +69,21 @@ public class OHLCData {
       }
   }
 
-  public produceOutput(int startTime, List<Order> orders) {
+  public static void produceOutput(int startTime, List<Order> orders) {
       // 1) OPEN: avg of first buy price and first sell price
       int firstBuyPrice = -1;
       int firstSellPrice = -1;
       for (int i = 0; i < orders.size(); ++i) {
           Order o = orders.get(i);
           if (o.getSide().equals("B")) {
-              firstBuyPrice = o.getPrice;
+              firstBuyPrice = o.getPrice();
               break;
           }
       }
       for (int i = 0; i < orders.size(); ++i) {
           Order o = orders.get(i);
           if (o.getSide().equals("S")) {
-              firstSellPrice = o.getPrice;
+              firstSellPrice = o.getPrice();
               break;
           }
       }
@@ -102,14 +97,14 @@ public class OHLCData {
       for (int i = orders.size() - 1; i >= 0; --i) {
           Order o = orders.get(i);
           if (o.getSide().equals("B")) {
-              lastBuyPrice = o.getPrice;
+              lastBuyPrice = o.getPrice();
               break;
           }
       }
       for (int i = orders.size() - 1; i >= 0; --i) {
           Order o = orders.get(i);
           if (o.getSide().equals("S")) {
-              lastSellPrice = o.getPrice;
+              lastSellPrice = o.getPrice();
               break;
           }
       }
@@ -169,7 +164,11 @@ public class OHLCData {
       System.out.println(startTime + "\t" + OPEN + "\t" + HIGH + "\t" + LOW + "\t" + CLOSE + "\n");
   }
 
-  public class Order {
+  public static void executeOrders(List<Order> orders) {
+
+  }
+
+  public static class Order {
     private int time;
     private String operation;
     private String id;
@@ -178,8 +177,12 @@ public class OHLCData {
     private int price;
 
     public Order(int time, String operation, String id, String side, int size, int price) {
-      this.date = date;
-
+      this.time = time;
+      this.operation = operation;
+      this.id = id;
+      this.side = side;
+      this.size = size;
+      this.price = price;
     }
 
     public int getTime() {
@@ -204,6 +207,14 @@ public class OHLCData {
 
     public int getPrice() {
       return price;
+    }
+
+    public void setSize(int sizeIn) {
+      size = sizeIn;
+    }
+
+    public void setPrice(int priceIn) {
+      price = priceIn;
     }
 
   }
