@@ -11,11 +11,13 @@ import java.util.*;
 
 public class OHLC {
 
+	private static int previousClose = -1;
+    private static int startTime = 1506999900;
+
   public static void main(String[] args) {
         List<Order> orders = new ArrayList<Order>();
         List<Order> ordersSortedByPrice = new ArrayList<Order>();
         Scanner scan = new Scanner(System.in);
-        int startTime = 1506999900;
         String line = scan.nextLine();
         while (!line.equals("")) {
             String[] arr = line.split("\\s+");
@@ -38,11 +40,9 @@ public class OHLC {
                     int price = Integer.parseInt(arr[5]);
                     Order o = new Order(currentTime, operation, id, side, size, price);
                     orders.add(o);
-                    System.out.println("Orders(" + orders.size() +"): ");
                 }
                 else if (operation.equals("MODIFY")) {
                     String id = arr[2];
-                    System.out.println("MODIFYYYYYY");
                     int size = Integer.parseInt(arr[3]);
                     int price = Integer.parseInt(arr[4]);
                     for (int i = 0; i < orders.size(); ++i) {
@@ -55,13 +55,11 @@ public class OHLC {
                 }
                 else if (operation.equals("CANCEL")) {
                     String id = arr[2];
-                    System.out.println("CANCELLLLLLLLL");
-                    System.out.println(orders.size());
                     removeByID(orders, id);
-                    System.out.println(orders.size());
                 }
                 else if (operation.equals("RESET")) {
                     orders.clear();
+                    previousClose = -1;
                 }
                 line = scan.nextLine();
             }
@@ -86,7 +84,6 @@ public class OHLC {
             System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
             printList(ordersSortedByPrice);
             startTime += 300;
-            //line = scan.nextLine();
         }
         scan.close();
   }
@@ -121,28 +118,34 @@ public class OHLC {
 
   public static void produceOutput(int startTime, List<Order> orders, List<Order> ordersSortedByPrice) {
       // TODO: use ordersSortedByPrice to access highest buy and sell price quickly
-      // 1) OPEN: avg of first buy price and first sell price
-      int firstBuyPrice = -1;
-      int firstSellPrice = -1;
-      for (int i = 0; i < orders.size(); ++i) {
-          Order o = orders.get(i);
-          if (o.getSide().equals("B") && o.getSize() != 0) {
-              firstBuyPrice = o.getPrice();
-              break;
-          }
-      }
-      for (int i = 0; i < orders.size(); ++i) {
-          Order o = orders.get(i);
-          if (o.getSide().equals("S") && o.getSize() != 0) {
-              firstSellPrice = o.getPrice();
-              break;
-          }
-      }
+      // 1) OPEN: previous CLOSE or avg of first buy price and first sell price if no previous CLOSE
       int OPEN = -1;
-      if (firstBuyPrice != -1 && firstSellPrice != -1) {
-          OPEN = (int) Math.floor((firstBuyPrice + firstSellPrice) / 2);
-      }
+	  if (previousClose == -1) { //no previousClose
+		  int firstBuyPrice = -1;
+	      int firstSellPrice = -1;
+	      for (int i = 0; i < orders.size(); ++i) {
+	          Order o = orders.get(i);
+	          if (o.getSide().equals("B") && o.getSize() != 0) {
+	              firstBuyPrice = o.getPrice();
+	              break;
+	          }
+	      }
+	      for (int i = 0; i < orders.size(); ++i) {
+	          Order o = orders.get(i);
+	          if (o.getSide().equals("S") && o.getSize() != 0) {
+	              firstSellPrice = o.getPrice();
+	              break;
+	          }
+	      }
+	      if (firstBuyPrice != -1 && firstSellPrice != -1) {
+	          OPEN = (int) Math.floor((firstBuyPrice + firstSellPrice) / 2);
+	      }
+	  } else {
+		  OPEN = previousClose;
+	  }
+      
       // 2) CLOSE: avg of last buy price and last sell price
+      int CLOSE = -1;
       int lastBuyPrice = -1;
       int lastSellPrice = -1;
       for (int i = orders.size() - 1; i >= 0; --i) {
@@ -159,7 +162,6 @@ public class OHLC {
               break;
           }
       }
-      int CLOSE = -1;
       if (lastBuyPrice != -1 && lastSellPrice != -1) {
           CLOSE = (int) Math.floor((lastBuyPrice + lastSellPrice) / 2);
       }
@@ -184,9 +186,11 @@ public class OHLC {
               }
           }
       }
-      int newHigh = (twoHighestBuyPrices.get(0) + twoHighestBuyPrices.get(1)) / 2;
-      if (newHigh > HIGH) {
-          HIGH = newHigh;
+      if (twoHighestBuyPrices.size() == 2) {
+          int newHigh = (twoHighestBuyPrices.get(0) + twoHighestBuyPrices.get(1)) / 2;
+          if (newHigh > HIGH) {
+              HIGH = newHigh;
+          }
       }
       // 4) LOW: avg of two lowest sell prices
       int LOW = Math.min(OPEN, CLOSE);
@@ -208,11 +212,14 @@ public class OHLC {
               }
           }
       }
-      int newLow = (twoLowestSellPrices.get(0) + twoLowestSellPrices.get(1)) / 2;
-      if (newLow > LOW) {
-          LOW = newLow;
+      if (twoLowestSellPrices.size() == 2) {
+    	  	  int newLow = (twoLowestSellPrices.get(0) + twoLowestSellPrices.get(1)) / 2;
+          if (newLow < LOW) {
+              LOW = newLow;
+          }
       }
       System.out.println(startTime + "\t" + OPEN + "\t" + HIGH + "\t" + LOW + "\t" + CLOSE + "\n");
+      previousClose = CLOSE;
   }
 
   public static List<Order> executeOrders(List<Order> ordersSortedByPrice) {
