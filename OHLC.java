@@ -17,13 +17,11 @@ public class OHLC {
         Scanner scan = new Scanner(System.in);
         int startTime = 1506999900;
         String line = scan.nextLine();
-        while (!line.equals("\n")) {
+        while (!line.equals("")) {
             String[] arr = line.split("\\s+");
             int currentTime = Integer.parseInt(arr[0]);
-            System.out.println("CurrentTime: " + currentTime);
-            System.out.println("Current - start time: " + (currentTime - startTime));
-
-            while (!line.equals("\n")) {
+           
+            while (!line.equals("")) {
             		arr = line.split("\\s+");
                 currentTime = Integer.parseInt(arr[0]);
                 System.out.println("CurrentTime: " + currentTime);
@@ -44,11 +42,12 @@ public class OHLC {
                 }
                 else if (operation.equals("MODIFY")) {
                     String id = arr[2];
+                    System.out.println("MODIFYYYYYY");
                     int size = Integer.parseInt(arr[3]);
                     int price = Integer.parseInt(arr[4]);
                     for (int i = 0; i < orders.size(); ++i) {
                         Order o = orders.get(i);
-                        if(o.getID().equals(id) && o.getSize() != 0) {
+                        if(o.getID().equals(id)) {
                             o.setSize(size);
                             o.setPrice(price);
                         }
@@ -56,7 +55,10 @@ public class OHLC {
                 }
                 else if (operation.equals("CANCEL")) {
                     String id = arr[2];
+                    System.out.println("CANCELLLLLLLLL");
+                    System.out.println(orders.size());
                     removeByID(orders, id);
+                    System.out.println(orders.size());
                 }
                 else if (operation.equals("RESET")) {
                     orders.clear();
@@ -83,14 +85,15 @@ public class OHLC {
             System.out.println("");
             System.out.println("Orders sorted by price-date(" + ordersSortedByPrice.size() + "): ");
             printList(ordersSortedByPrice);
-            startTime = currentTime;
-            line = scan.nextLine();
+            startTime += 300;
+            //line = scan.nextLine();
         }
         scan.close();
   }
 
   public static void removeByID(List<Order> orders, String id) {
-      for (Order o : orders) {
+      for (int i = 0; i < orders.size(); ++i) {
+    	  	  Order o = orders.get(i);
           if (o.getID().equals(id)) {
               orders.remove(o);
           }
@@ -234,20 +237,12 @@ public class OHLC {
             	            System.out.println("O2 is larger than O1!");
         	  				reduceSizeByID(o2ID, o2Size - o1.getSize(), ordersSortedByPrice);
         	  				reduceSizeByID(o1ID, 0, ordersSortedByPrice);
-        	  				/*
-        	  				o2.setSize(o2Size - o1Size);
-        	  				o1.setSize(0);
-        	  				*/
         	  			} else if (o2Size <= o1.getSize()) {
             	            System.out.println("O2 is smaller than O1!");
         	  				reduceSizeByID(o2ID, 0, ordersSortedByPrice);
         	  				reduceSizeByID(o1ID, o1.getSize() - o2Size, ordersSortedByPrice);
         	  				System.out.println("New o1 size: " + o1.getSize());
         	  				System.out.println("New o2 size: " + o2.getSize());
-        	  				/*
-        	  				o2.setSize(0);
-        	  				o1.setSize(o1Size - o2Size);
-        	  				*/
         	  			}
         	  		}
         	  		if (o1.getSize() == 0) {
